@@ -1,20 +1,14 @@
-// FIND PHOTOS OF RELEVANT BUSINESSES
-export const FETCH_RECOMMENDED_PHOTOS_QUERY =
-`
+export const FETCH_RECOMMENDED_PHOTOS_QUERY = `
 MATCH (b:Business)-[:HAS_PHOTO]->(p:Photo)
 WITH b, p SKIP toInteger(rand() * 30000)-1000 LIMIT 10000
 WITH COLLECT(p{photoId: p.id, businessId: b.id}) AS photos
 RETURN apoc.coll.shuffle(photos)[..199] AS photos
 `;
 
-export const FETCH_PHOTO_RECOMMENDATIONS = 
-`
+export const FETCH_PHOTO_RECOMMENDATIONS = `
 UNWIND $selectedPhotos AS photoId
-// Recommend businesses that have the photo in the same partition
-// Hint: Use the partition property of the photo
-
-MATCH (p:Photo {id: photoId})<-[:HAS_PHOTO]-(b:Business)
-RETURN COLLECT(b {.*, photo: p.id}) AS recommendations
+MATCH (p:Photo {id: photoId})
+MATCH (recPhoto:Photo {partition: p.partition})<-[:HAS_PHOTO]-(b:Business)
+WITH b, COUNT(*) AS num, COLLECT(recPhoto)[0] AS businessPhoto ORDER BY num DESC LIMIT 100
+RETURN COLLECT(b {.*, photo: businessPhoto.id}) AS recommendations
 `;
-
-// The solution for this exercise is available in  src/solutions/exercise4.js
